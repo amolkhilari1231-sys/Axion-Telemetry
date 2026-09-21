@@ -17,6 +17,7 @@ resource "azurerm_postgresql_flexible_server" "postgresql"{
 }
 
 resource "azurerm_postgresql_flexible_server_firewall_rule" "postgresql_firewall_rule" {
+    depends_on = [azurerm_postgresql_flexible_server.postgresql]
   name             = "postgresql-firewall-rule"
   server_id        = azurerm_postgresql_flexible_server.postgresql[each.key].id
   start_ip_address = "*"
