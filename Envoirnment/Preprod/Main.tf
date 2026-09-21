@@ -18,3 +18,9 @@ module "virtual_machine" {
   source     = "../../modules/Virtual_machine"
   vms        = var.vms
 }
+
+module "postgresql_flexble_service" {
+  depends_on = [module.subnet]
+  source     = "../../modules/postgresql_flexble_service"
+  postgresql = var.postgresql
+}
