@@ -24,3 +24,4 @@ module "postgresql_flexble_service" {
   source     = "../../modules/postgresql_flexble_service"
   postgresql = var.postgresql
 }
+
