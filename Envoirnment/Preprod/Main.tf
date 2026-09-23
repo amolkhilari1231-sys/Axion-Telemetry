@@ -25,3 +25,15 @@ module "postgresql_flexble_service" {
   postgresql = var.postgresql
 }
 
+module "Azure_Bastion" {
+  depends_on = [module.subnet]
+  source     = "../../modules/Azure_Bastion"
+  AzureBastion = var.AzureBastion
+}
+
+module "vnet_peering" {
+  depends_on = [module.virtual_network]
+  source     = "../../modules/VNet_Peering"
+  vnetpeering = var.vnetpeering
+}
+
