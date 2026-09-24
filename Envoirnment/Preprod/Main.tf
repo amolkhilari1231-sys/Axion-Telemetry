@@ -26,14 +26,25 @@ module "postgresql_flexble_service" {
 }
 
 module "Azure_Bastion" {
-  depends_on = [module.subnet]
-  source     = "../../modules/Azure_Bastion"
+  depends_on   = [module.subnet]
+  source       = "../../modules/Azure_Bastion"
   AzureBastion = var.AzureBastion
 }
 
 module "vnet_peering" {
-  depends_on = [module.virtual_network]
-  source     = "../../modules/VNet_Peering"
+  depends_on  = [module.virtual_network]
+  source      = "../../modules/VNet_Peering"
   vnetpeering = var.vnetpeering
 }
 
+module "nat_gateway" {
+  depends_on = [module.subnet]
+  source     = "../../modules/Nat_gateway"
+  nat_gatway = var.nat_gatway
+}
+
+module "Application_Gateway" {
+  depends_on          = [module.subnet, module.nat_gateway]
+  source              = "../../modules/Application_Gateway"
+  Application_Gateway = var.Application_Gateway
+}

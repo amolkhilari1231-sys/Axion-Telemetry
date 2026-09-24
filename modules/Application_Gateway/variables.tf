@@ -1,0 +1,1 @@
+variable "Application_Gateway" {}

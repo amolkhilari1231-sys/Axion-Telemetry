@@ -1,18 +1,5 @@
 variable "vms" {}
 
-resource "azurerm_public_ip" "pips" {
-    for_each = var.vms
-  name                = each.value.pip_name
-  resource_group_name = each.value.rg_name
-  location            = each.value.location
-  allocation_method   = "Static"
-}
-data "azurerm_public_ip" "pip_data" {
-    for_each = var.vms
-  name                = each.value.pip_name
-  resource_group_name = each.value.rg_name
-  
-}
 
 data "azurerm_subnet" "subneet" {
     for_each = var.vms
@@ -22,7 +9,6 @@ data "azurerm_subnet" "subneet" {
 }
 
 resource "azurerm_network_interface" "nics" {
-    depends_on = [ azurerm_public_ip.pips ]
     for_each = var.vms
   name                = each.value.nic_name
   location            = each.value.location
@@ -36,7 +22,7 @@ resource "azurerm_network_interface" "nics" {
 }
 
 resource "azurerm_linux_virtual_machine" "VMS" {
-    depends_on = [ azurerm_network_interface.nics, azurerm_public_ip.pips ]
+    depends_on = [ azurerm_network_interface.nics,]
     for_each = var.vms
   name                = each.value.vm_name
   resource_group_name = each.value.rg_name

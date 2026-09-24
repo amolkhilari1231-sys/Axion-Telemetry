@@ -5,4 +5,6 @@ variable "vms" {}
 variable "postgresql" {}
 variable "AzureBastion" {}
 variable "vnetpeering" {}
+variable "nat_gatway" {}
+variable "Application_Gateway" {}
 
