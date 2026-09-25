@@ -19,6 +19,7 @@ resource "azurerm_public_ip" "NAT_gateway_pip" {
   resource_group_name = each.value.rg_name
   allocation_method   = "Static"
   sku                 = "Standard"
+  zones = ["1"]
 }
 
 resource "azurerm_nat_gateway" "nat_gateway" {
