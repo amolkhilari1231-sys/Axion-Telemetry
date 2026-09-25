@@ -49,8 +49,8 @@ module "Application_Gateway" {
   Application_Gateway = var.Application_Gateway
 }
 
-module "Azure_firewall" {
-  depends_on     = [module.subnet, module.nat_gateway]
-  source         = "../../modules/Azure_firewall"
-  azure_firewall = var.azure_firewall
-}
+# module "Azure_firewall" {
+#   depends_on     = [module.subnet, module.nat_gateway]
+#   source         = "../../modules/Azure_firewall"
+#   azure_firewall = var.azure_firewall
+# }

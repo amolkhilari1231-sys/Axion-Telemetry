@@ -158,6 +158,7 @@ nat_gatway = {
     name                    = "nat-gateway"
     rg_name                 = "dev_rg"
     location                = "central india"
+    public_ip_name          = "nat-gateway-pip"
     idle_timeout_in_minutes = 10
     zones                   = ["1"]
 
@@ -210,16 +211,16 @@ Application_Gateway = {
   }
 }
 
-azure_firewall = {
-  firewall1 = {
-    name           = "axionfirewall"
-    rg_name        = "dev_rg"
-    location       = "central india"
-    subnet_name    = "AzureFirewallSubnet"
-    vnet_name      = "Hub_vnet"
-    public_ip_name = "firewall_pip"
-    sku_name       = "AZFW_VNet"
-    sku_tier       = "Standard"
-    subnet_name    = "AzureFirewallSubnet"
-  }
-}
+# azure_firewall = {
+#   firewall1 = {
+#     name           = "axionfirewall"
+#     rg_name        = "dev_rg"
+#     location       = "central india"
+#     subnet_name    = "AzureFirewallSubnet"
+#     vnet_name      = "Hub_vnet"
+#     public_ip_name = "firewall_pip"
+#     sku_name       = "AZFW_VNet"
+#     sku_tier       = "Standard"
+#     subnet_name    = "AzureFirewallSubnet"
+#   }
+# }

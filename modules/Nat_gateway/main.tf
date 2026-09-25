@@ -11,6 +11,16 @@ data "azurerm_subnet" "backend" {
   virtual_network_name = each.value.backend.virtual_network_name
   resource_group_name  = each.value.backend.resource_group_name
 }
+
+resource "azurerm_public_ip" "NAT_gateway_pip" {
+    for_each = var.nat_gatway
+  name                = each.value.public_ip_name
+  location            = each.value.location
+  resource_group_name = each.value.rg_name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+
 resource "azurerm_nat_gateway" "nat_gateway" {
     for_each = var.nat_gatway
   name                    = each.value.name
@@ -28,6 +38,13 @@ resource "azurerm_subnet_nat_gateway_association" "frontend" {
   subnet_id = data.azurerm_subnet.frontend[each.key].id
 
   nat_gateway_id = azurerm_nat_gateway.nat_gateway[each.key].id
+}
+
+resource "azurerm_nat_gateway_public_ip_association" "nat_gateway" {
+  for_each = var.nat_gatway
+
+  nat_gateway_id       = azurerm_nat_gateway.nat_gateway[each.key].id
+  public_ip_address_id = azurerm_public_ip.NAT_gateway_pip[each.key].id
 }
 
 resource "azurerm_subnet_nat_gateway_association" "backend" {
