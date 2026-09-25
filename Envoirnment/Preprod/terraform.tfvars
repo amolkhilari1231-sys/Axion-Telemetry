@@ -40,15 +40,21 @@ subnets = {
     vnet_name        = "Hub_vnet"
     address_prefixes = ["10.1.1.0/24"]
   }
-  
+
   subnet5 = {
     name             = "AzureBastionSubnet"
     rg_name          = "dev_rg"
     vnet_name        = "Hub_vnet"
     address_prefixes = ["10.1.3.0/24"]
   }
-  
-  
+  subnet6 = {
+    name             = "AzureFirewallSubnet"
+    rg_name          = "dev_rg"
+    vnet_name        = "Hub_vnet"
+    address_prefixes = ["10.1.4.0/24"]
+  }
+
+
 }
 vms = {
   # vm1 = {
@@ -170,9 +176,9 @@ nat_gatway = {
 
 Application_Gateway = {
   appgw1 = {
-    name         = "Axion-appgateway"
-    rg_name      = "dev_rg"
-    location     = "central india"
+    name     = "Axion-appgateway"
+    rg_name  = "dev_rg"
+    location = "central india"
 
     sku_name     = "Standard_v2"
     sku_tier     = "Standard_v2"
@@ -181,7 +187,7 @@ Application_Gateway = {
     subnet_name = "AppGateway_subnet"
     vnet_name   = "Hub_vnet"
 
-    gateway_ip_config  = "my-gateway-ip-configuration"
+    gateway_ip_config = "my-gateway-ip-configuration"
 
     frontend_port_name = "frontend-port"
     frontend_port      = 80
@@ -192,14 +198,28 @@ Application_Gateway = {
     backend_address_pool = "backend-address-pool-name"
     backend_private_ip   = "10.0.2.4"
 
-    http_setting_name      = "http-setting-name"
-    cookie_based_affinity  = "Disabled"
-    path                   = "/path1/"
-    port                   = 8001
-    protocol               = "Http"
-    request_timeout        = 60
+    http_setting_name     = "http-setting-name"
+    cookie_based_affinity = "Disabled"
+    path                  = "/path1/"
+    port                  = 8001
+    protocol              = "Http"
+    request_timeout       = 60
 
     listener_name     = "listener-name"
     routing_rule_name = "routing-rule-name"
+  }
+}
+
+azure_firewall = {
+  firewall1 = {
+    name           = "axionfirewall"
+    rg_name        = "dev_rg"
+    location       = "central india"
+    subnet_name    = "AzureFirewallSubnet"
+    vnet_name      = "Hub_vnet"
+    public_ip_name = "firewall_pip"
+    sku_name       = "AZFW_VNet"
+    sku_tier       = "Standard"
+    subnet_name    = "AzureFirewallSubnet"
   }
 }
