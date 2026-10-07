@@ -197,7 +197,7 @@ Application_Gateway = {
     pip_names          = "Applicationpipname"
 
     backend_address_pool = "backend-address-pool-name"
-    backend_private_ip   = "10.0.2.4"
+    backend_private_ip   = "10.0.1.4"
 
     http_setting_name     = "http-setting-name"
     cookie_based_affinity = "Disabled"
