@@ -2,21 +2,21 @@ data "azurerm_subnet" "frontend" {
     for_each = var.nat_gatway
   name                 = each.value.frontend.name
   virtual_network_name = each.value.frontend.virtual_network_name
-  resource_group_name  = each.value.frontend.resource_group_name
+  resource_group_name  = var.rgs
 }
 
 data "azurerm_subnet" "backend" {
     for_each = var.nat_gatway
   name                 = each.value.backend.name
   virtual_network_name = each.value.backend.virtual_network_name
-  resource_group_name  = each.value.backend.resource_group_name
+  resource_group_name  = var.rgs
 }
 
 resource "azurerm_public_ip" "NAT_gateway_pip" {
     for_each = var.nat_gatway
   name                = each.value.public_ip_name
-  location            = each.value.location
-  resource_group_name = each.value.rg_name
+  location            = var.location
+  resource_group_name = var.rgs
   allocation_method   = "Static"
   sku                 = "Standard"
   zones = ["1"]
@@ -25,8 +25,8 @@ resource "azurerm_public_ip" "NAT_gateway_pip" {
 resource "azurerm_nat_gateway" "nat_gateway" {
     for_each = var.nat_gatway
   name                    = each.value.name
-  location                = each.value.location
-  resource_group_name     = each.value.rg_name
+  location                = var.location
+  resource_group_name     = var.rgs
   sku_name                = "Standard"
   idle_timeout_in_minutes = each.value.idle_timeout_in_minutes
   zones                   = each.value.zones

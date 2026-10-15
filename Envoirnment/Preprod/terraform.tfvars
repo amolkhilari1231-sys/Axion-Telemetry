@@ -1,21 +1,13 @@
-rgs = {
-  rg1 = {
-    name     = "dev_rg"
-    location = "central india"
-  }
-}
+rgs      = "dev_rg"
+location = "central india"
 
 vnets = {
   vnet1 = {
     name          = "Spoke_vnet"
-    rg_name       = "dev_rg"
-    location      = "central india"
     address_space = ["10.0.0.0/16"]
   }
   vnet2 = {
     name          = "Hub_vnet"
-    rg_name       = "dev_rg"
-    location      = "central india"
     address_space = ["10.1.0.0/16"]
 
   }
@@ -23,33 +15,28 @@ vnets = {
 subnets = {
   subnet1 = {
     name             = "Frontend_subnet"
-    rg_name          = "dev_rg"
     vnet_name        = "Spoke_vnet"
     address_prefixes = ["10.0.1.0/24"]
   }
   subnet2 = {
     name             = "Backend_subnet"
-    rg_name          = "dev_rg"
     vnet_name        = "Spoke_vnet"
     address_prefixes = ["10.0.2.0/24"]
   }
 
   subnet3 = {
     name             = "AppGateway_subnet"
-    rg_name          = "dev_rg"
     vnet_name        = "Hub_vnet"
     address_prefixes = ["10.1.1.0/24"]
   }
 
   subnet5 = {
     name             = "AzureBastionSubnet"
-    rg_name          = "dev_rg"
     vnet_name        = "Hub_vnet"
     address_prefixes = ["10.1.3.0/24"]
   }
   subnet6 = {
     name             = "AzureFirewallSubnet"
-    rg_name          = "dev_rg"
     vnet_name        = "Hub_vnet"
     address_prefixes = ["10.1.4.0/24"]
   }
@@ -59,8 +46,6 @@ subnets = {
 vms = {
   # vm1 = {
   #   nic_name       = "frontend_nic"
-  #   rg_name        = "dev_rg"
-  #   location       = "central india"
   #   subnet_name    = "Frontend_subnet"
   #   vnet_name      = "Spoke_vnet"
   #   vm_name        = "axionfrontendvm"
@@ -87,8 +72,6 @@ vms = {
 
   vm2 = {
     nic_name       = "backend_nic"
-    rg_name        = "dev_rg"
-    location       = "central india"
     subnet_name    = "Backend_subnet"
     vnet_name      = "Spoke_vnet"
     vm_name        = "axionbackendvm"
@@ -120,8 +103,6 @@ vms = {
 postgresql = {
   postgresql1 = {
     name           = "axionpostgresql"
-    rg_name        = "dev_rg"
-    location       = "central india"
     admin_username = "adminuser"
     admin_password = "Admin@123"
   }
@@ -130,8 +111,6 @@ postgresql = {
 AzureBastion = {
   bastion1 = {
     name        = "axionbastion"
-    rg_name     = "dev_rg"
-    location    = "central india"
     subnet_name = "AzureBastionSubnet"
     vnet_name   = "Hub_vnet"
     pip_name    = "bastion_pip"
@@ -141,13 +120,11 @@ AzureBastion = {
 vnetpeering = {
   peering1 = {
     name             = "peer1to2"
-    rg_name          = "dev_rg"
     vnet_name        = "Spoke_vnet"
     remote_vnet_name = "Hub_vnet"
   }
   peering2 = {
     name             = "peer2to1"
-    rg_name          = "dev_rg"
     vnet_name        = "Hub_vnet"
     remote_vnet_name = "Spoke_vnet"
   }
@@ -156,8 +133,6 @@ vnetpeering = {
 nat_gatway = {
   nat1 = {
     name                    = "nat-gateway"
-    rg_name                 = "dev_rg"
-    location                = "central india"
     public_ip_name          = "nat-gateway-pip"
     idle_timeout_in_minutes = 10
     zones                   = ["1"]
@@ -177,9 +152,7 @@ nat_gatway = {
 
 Application_Gateway = {
   appgw1 = {
-    name     = "Axion-appgateway"
-    rg_name  = "dev_rg"
-    location = "central india"
+    name = "Axion-appgateway"
 
     sku_name     = "Standard_v2"
     sku_tier     = "Standard_v2"

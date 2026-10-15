@@ -1,1 +1,2 @@
 variable "vnetpeering" {}
+variable "rgs" {}

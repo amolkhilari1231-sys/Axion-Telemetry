@@ -8,3 +8,4 @@ variable "vnetpeering" {}
 variable "nat_gatway" {}
 variable "Application_Gateway" {}
 # variable "azure_firewall" {}
+variable "location" {}

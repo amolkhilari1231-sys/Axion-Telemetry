@@ -4,14 +4,14 @@ data "azurerm_virtual_network" "vnet_id" {
     v.vnet_name => v
   }
   name                = each.value.vnet_name
-  resource_group_name = each.value.rg_name
+  resource_group_name = var.rgs
   
 }
 resource "azurerm_virtual_network_peering" "vnetpeering" {
     for_each = var.vnetpeering
 
   name                      = each.value.name
-  resource_group_name       = each.value.rg_name
+  resource_group_name       = var.rgs
   virtual_network_name      = each.value.vnet_name
   remote_virtual_network_id = data.azurerm_virtual_network.vnet_id[each.value.remote_vnet_name].id
 

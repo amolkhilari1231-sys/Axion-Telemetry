@@ -3,15 +3,15 @@ data "azurerm_subnet" "AppGateway_subnet" {
 
   name                 = each.value.subnet_name
   virtual_network_name = each.value.vnet_name
-  resource_group_name  = each.value.rg_name
+  resource_group_name  = var.rgs
 }
 
 resource "azurerm_public_ip" "Application_pip" {
   for_each = var.Application_Gateway
 
   name                = each.value.pip_names
-  resource_group_name = each.value.rg_name
-  location            = each.value.location
+  resource_group_name = var.rgs
+  location            = var.location
 
   allocation_method = "Static"
   sku               = "Standard"
@@ -21,8 +21,8 @@ resource "azurerm_application_gateway" "Axion" {
   for_each = var.Application_Gateway
 
   name                = each.value.name
-  resource_group_name = each.value.rg_name
-  location            = each.value.location
+  resource_group_name = var.rgs
+  location            = var.location
 
   sku {
     name     = each.value.sku_name

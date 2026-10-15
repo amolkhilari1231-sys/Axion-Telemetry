@@ -1,18 +1,19 @@
 variable "vms" {}
-
+variable "rgs" {}
+variable "location" {}
 
 data "azurerm_subnet" "subneet" {
     for_each = var.vms
   name                 = each.value.subnet_name
   virtual_network_name = each.value.vnet_name
-  resource_group_name  = each.value.rg_name
+  resource_group_name  = var.rgs
 }
 
 resource "azurerm_network_interface" "nics" {
     for_each = var.vms
   name                = each.value.nic_name
-  location            = each.value.location
-  resource_group_name = each.value.rg_name
+  location            = var.location
+  resource_group_name = var.rgs
 
   ip_configuration {
     name                          = "internal"
@@ -25,8 +26,8 @@ resource "azurerm_linux_virtual_machine" "VMS" {
     depends_on = [ azurerm_network_interface.nics,]
     for_each = var.vms
   name                = each.value.vm_name
-  resource_group_name = each.value.rg_name
-  location            = each.value.location
+  resource_group_name = var.rgs
+  location            = var.location
   size                = each.value.size
   admin_username      = each.value.admin_username
   admin_password      = each.value.admin_password
@@ -54,8 +55,8 @@ resource "azurerm_network_security_group" "nsg" {
     depends_on = [ azurerm_linux_virtual_machine.VMS ]
     for_each = var.vms
   name                = each.value.nsg_name
-  location            = each.value.location
-  resource_group_name = each.value.rg_name
+  location            = var.location
+  resource_group_name = var.rgs
 
   security_rule {
     name                       = "Allow-SSH"

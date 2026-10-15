@@ -1,8 +1,8 @@
 resource "azurerm_postgresql_flexible_server" "postgresql"{
     for_each = var.postgresql
   name                          = each.value.name
-  resource_group_name           = each.value.rg_name
-  location                      = each.value.location
+  resource_group_name           = var.rgs
+  location                      = var.location
   version                       = "12"
   public_network_access_enabled = true
   administrator_login           = each.value.admin_username
