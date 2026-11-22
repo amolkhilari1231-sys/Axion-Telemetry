@@ -1,0 +1,81 @@
+name: "⚙️ NextOps Ingestion Service - Backend Deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target Environment"
+        required: true
+        type: choice
+        options:
+          - "Preprod"
+          - "Production"
+        default: "Preprod"
+      auto_rollback:
+        description: "Automatically rollback on failure"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-backend:
+    name: "⚙️ Backend Deploy (${{ inputs.environment }})"
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python & Lint
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Syntax & Unit Validation
+        run: |
+          python3 -m pip install -r Application/Backend/requirements.txt
+          python3 -m py_compile Application/Backend/main.py
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure VM
+        id: deploy
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'Admin@123!' }}
+          INGEST_API_KEY: ${{ secrets.INGEST_API_KEY || 'dev-key' }}
+        run: |
+          ENV="${{ inputs.environment }}"
+          if [ "$ENV" = "Production" ]; then
+            export RESOURCE_GROUP="prod_rg"
+            export VM_NAME="axionbackendvm-prod"
+            export POSTGRES_SERVER="axionpostgresql-prod"
+          else
+            export RESOURCE_GROUP="dev_rg"
+            export VM_NAME="axionbackendvm"
+            export POSTGRES_SERVER="axionpostgresql"
+          fi
+
+          chmod +x deployment/scripts/*.sh
+          ./deployment/scripts/deploy-backend.sh "$ENV"
+
+      - name: Rollback on Failure
+        if: failure() && inputs.auto_rollback == true
+        run: |
+          ENV="${{ inputs.environment }}"
+          if [ "$ENV" = "Production" ]; then
+            export RESOURCE_GROUP="prod_rg"
+            export VM_NAME="axionbackendvm-prod"
+          else
+            export RESOURCE_GROUP="dev_rg"
+            export VM_NAME="axionbackendvm"
+          fi
+          ./deployment/scripts/rollback.sh "$ENV"

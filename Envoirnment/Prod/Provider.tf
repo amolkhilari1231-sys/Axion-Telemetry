@@ -4,6 +4,13 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "5.0.0"
     }
+<<<<<<< HEAD
+=======
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
+>>>>>>> f0aee43 ( Update deployment code)
   }
   backend "azurerm" {
     resource_group_name  = "QA_Storage"

@@ -1,10 +1,16 @@
 module "resource_group" {
+<<<<<<< HEAD
   source   = "../../modules/Resource_Group"
   rgs      = var.rgs
   location = var.location
 
 
+=======
+  source = "../../modules/Resource_Group"
+  rgs    = var.rgs
+>>>>>>> f0aee43 ( Update deployment code)
 }
+
 module "virtual_network" {
   depends_on = [module.resource_group]
   source     = "../../modules/Virtual_network"
@@ -12,6 +18,7 @@ module "virtual_network" {
   rgs        = var.rgs
   location   = var.location
 }
+
 module "subnet" {
   depends_on = [module.virtual_network]
   source     = "../../modules/Subnets"
@@ -19,6 +26,7 @@ module "subnet" {
   rgs        = var.rgs
 
 }
+
 module "virtual_machine" {
   depends_on = [module.subnet]
   source     = "../../modules/Virtual_machine"

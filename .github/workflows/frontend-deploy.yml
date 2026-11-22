@@ -1,0 +1,66 @@
+name: "🌐 NextOps Dashboard - Frontend Deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target Environment"
+        required: true
+        type: choice
+        options:
+          - "Preprod"
+          - "Production"
+        default: "Preprod"
+      auto_rollback:
+        description: "Automatically rollback on failure"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-frontend:
+    name: "🌐 Frontend Deploy (${{ inputs.environment }})"
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Frontend to Azure VM / Nginx
+        id: deploy
+        run: |
+          ENV="${{ inputs.environment }}"
+          if [ "$ENV" = "Production" ]; then
+            export RESOURCE_GROUP="prod_rg"
+            export VM_NAME="axionbackendvm-prod"
+          else
+            export RESOURCE_GROUP="dev_rg"
+            export VM_NAME="axionbackendvm"
+          fi
+
+          chmod +x deployment/scripts/*.sh
+          ./deployment/scripts/deploy-frontend.sh "$ENV"
+
+      - name: Rollback on Failure
+        if: failure() && inputs.auto_rollback == true
+        run: |
+          ENV="${{ inputs.environment }}"
+          if [ "$ENV" = "Production" ]; then
+            export RESOURCE_GROUP="prod_rg"
+            export VM_NAME="axionbackendvm-prod"
+          else
+            export RESOURCE_GROUP="dev_rg"
+            export VM_NAME="axionbackendvm"
+          fi
+          ./deployment/scripts/rollback.sh "$ENV"

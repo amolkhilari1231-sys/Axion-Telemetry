@@ -46,7 +46,7 @@ resource "azurerm_application_gateway" "Axion" {
   }
 
   backend_address_pool {
-    name  = each.value.backend_address_pool
+    name = each.value.backend_address_pool
     ip_addresses = [
       each.value.backend_private_ip
     ]

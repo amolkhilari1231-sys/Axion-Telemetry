@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  nextops-backend:
+    image: nextops-backend:latest
+    container_name: nextops-backend
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - DATABASE_URL=${DATABASE_URL}
+      - INGEST_API_KEY=${INGEST_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

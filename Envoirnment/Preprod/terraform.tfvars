@@ -9,9 +9,9 @@ vnets = {
   vnet2 = {
     name          = "Hub_vnet"
     address_space = ["10.1.0.0/16"]
-
   }
 }
+
 subnets = {
   subnet1 = {
     name             = "Frontend_subnet"
@@ -23,13 +23,11 @@ subnets = {
     vnet_name        = "Spoke_vnet"
     address_prefixes = ["10.0.2.0/24"]
   }
-
   subnet3 = {
     name             = "AppGateway_subnet"
     vnet_name        = "Hub_vnet"
     address_prefixes = ["10.1.1.0/24"]
   }
-
   subnet5 = {
     name             = "AzureBastionSubnet"
     vnet_name        = "Hub_vnet"
@@ -40,10 +38,10 @@ subnets = {
     vnet_name        = "Hub_vnet"
     address_prefixes = ["10.1.4.0/24"]
   }
-
-
 }
+
 vms = {
+<<<<<<< HEAD
   # vm1 = {
   #   nic_name       = "frontend_nic"
   #   subnet_name    = "Frontend_subnet"
@@ -70,6 +68,8 @@ vms = {
   #   }
   # }
 
+=======
+>>>>>>> f0aee43 ( Update deployment code)
   vm2 = {
     nic_name       = "backend_nic"
     subnet_name    = "Backend_subnet"
@@ -77,11 +77,10 @@ vms = {
     vm_name        = "axionbackendvm"
     size           = "Standard_D4_v5"
     admin_username = "adminuser"
-    admin_password = "Admin@123"
+    admin_password = "Admin@123!"
     nsg_name       = "backend_nsg"
 
     security_rule = {
-
       allow_http = {
         name                       = "allow-http"
         priority                   = 120
@@ -90,12 +89,9 @@ vms = {
         protocol                   = "Tcp"
         source_port_range          = "*"
         destination_port_range     = "8001"
-        source_address_prefix      = "10.0.1.0/24"
+        source_address_prefix      = "10.0.2.0/24"
         destination_address_prefix = "*"
-
       }
-
-
     }
   }
 }
@@ -104,7 +100,7 @@ postgresql = {
   postgresql1 = {
     name           = "axionpostgresql"
     admin_username = "adminuser"
-    admin_password = "Admin@123"
+    admin_password = "Admin@123!"
   }
 }
 
@@ -146,9 +142,9 @@ nat_gatway = {
       name                 = "Backend_subnet"
       virtual_network_name = "Spoke_vnet"
       resource_group_name  = "dev_rg"
-
     }
-} }
+  }
+}
 
 Application_Gateway = {
   appgw1 = {
@@ -183,17 +179,3 @@ Application_Gateway = {
     routing_rule_name = "routing-rule-name"
   }
 }
-
-# azure_firewall = {
-#   firewall1 = {
-#     name           = "axionfirewall"
-#     rg_name        = "dev_rg"
-#     location       = "central india"
-#     subnet_name    = "AzureFirewallSubnet"
-#     vnet_name      = "Hub_vnet"
-#     public_ip_name = "firewall_pip"
-#     sku_name       = "AZFW_VNet"
-#     sku_tier       = "Standard"
-#     subnet_name    = "AzureFirewallSubnet"
-#   }
-# }

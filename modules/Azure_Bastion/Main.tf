@@ -1,5 +1,5 @@
 data "azurerm_subnet" "AzureBastion_subnet" {
-    for_each = var.AzureBastion
+  for_each             = var.AzureBastion
   name                 = each.value.subnet_name
   virtual_network_name = each.value.vnet_name
   resource_group_name  = var.rgs
@@ -7,7 +7,7 @@ data "azurerm_subnet" "AzureBastion_subnet" {
 
 
 resource "azurerm_public_ip" "AzureBastion_pip" {
-    for_each = var.AzureBastion
+  for_each            = var.AzureBastion
   name                = each.value.name
   resource_group_name = var.rgs
   location            = var.location
@@ -16,8 +16,8 @@ resource "azurerm_public_ip" "AzureBastion_pip" {
 }
 
 resource "azurerm_bastion_host" "Axion_Bastion" {
-    depends_on = [ azurerm_public_ip.AzureBastion_pip ]
-    for_each = var.AzureBastion 
+  depends_on          = [azurerm_public_ip.AzureBastion_pip]
+  for_each            = var.AzureBastion
   name                = each.value.name
   resource_group_name = var.rgs
   location            = var.location

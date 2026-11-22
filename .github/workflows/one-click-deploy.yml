@@ -1,0 +1,316 @@
+name: "🚀 NextOps One-Click Deployment System"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target Cloud Environment"
+        required: true
+        type: choice
+        options:
+          - "Preprod"
+          - "Production"
+        default: "Preprod"
+      action:
+        description: "Deployment Scope / Action"
+        required: true
+        type: choice
+        options:
+          - "Deploy All (End-to-End)"
+          - "Infrastructure Only"
+          - "Database Only"
+          - "Backend Only"
+          - "Frontend Only"
+          - "Validate Only"
+          - "Rollback"
+        default: "Deploy All (End-to-End)"
+      auto_rollback:
+        description: "Automatically rollback on deployment or health check failure"
+        required: true
+        type: boolean
+        default: true
+      db_rollback_target:
+        description: "Target DB migration version for rollback (optional, e.g. 001)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  # ============================================================================
+  # JOB 1: INITIALIZE & ENVIRONMENT RESOLUTION
+  # ============================================================================
+  setup-environment:
+    name: "🔧 [Init] Configure Environment Context (${{ inputs.environment }})"
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set_env.outputs.env_name }}
+      resource_group: ${{ steps.set_env.outputs.resource_group }}
+      postgres_server: ${{ steps.set_env.outputs.postgres_server }}
+      vm_name: ${{ steps.set_env.outputs.vm_name }}
+      app_gateway: ${{ steps.set_env.outputs.app_gateway }}
+      tf_state_key: ${{ steps.set_env.outputs.tf_state_key }}
+    steps:
+      - name: Resolve Environment Configuration
+        id: set_env
+        run: |
+          ENV="${{ inputs.environment }}"
+          if [ "$ENV" = "Production" ]; then
+            echo "env_name=Production" >> $GITHUB_OUTPUT
+            echo "resource_group=prod_rg" >> $GITHUB_OUTPUT
+            echo "postgres_server=axionpostgresql-prod" >> $GITHUB_OUTPUT
+            echo "vm_name=axionbackendvm-prod" >> $GITHUB_OUTPUT
+            echo "app_gateway=Axion-appgateway-prod" >> $GITHUB_OUTPUT
+            echo "tf_state_key=prod/terraform.tfstate" >> $GITHUB_OUTPUT
+          else
+            echo "env_name=Preprod" >> $GITHUB_OUTPUT
+            echo "resource_group=dev_rg" >> $GITHUB_OUTPUT
+            echo "postgres_server=axionpostgresql" >> $GITHUB_OUTPUT
+            echo "vm_name=axionbackendvm" >> $GITHUB_OUTPUT
+            echo "app_gateway=Axion-appgateway" >> $GITHUB_OUTPUT
+            echo "tf_state_key=preprod/terraform.tfstate" >> $GITHUB_OUTPUT
+          fi
+          echo "Selected Environment: $ENV"
+
+  # ============================================================================
+  # JOB 2: TERRAFORM INFRASTRUCTURE (DRY-RUN / PLAN)
+  # ============================================================================
+  infra-plan:
+    name: "📋 [Infra] Terraform Plan (${{ inputs.environment }})"
+    needs: [setup-environment]
+    if: ${{ inputs.action == 'Deploy All (End-to-End)' || inputs.action == 'Infrastructure Only' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Plan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: "true"
+        run: |
+          chmod +x deployment/scripts/*.sh
+          ./deployment/scripts/deploy-infra.sh "${{ inputs.environment }}" "plan"
+
+  # ============================================================================
+  # JOB 3: TERRAFORM INFRASTRUCTURE APPLY (REUSE EXISTING AZURE INFRA)
+  # Production requires GitHub Environment Approval gate
+  # ============================================================================
+  infra-apply:
+    name: "⚡ [Infra] Terraform Apply (${{ inputs.environment }})"
+    needs: [setup-environment, infra-plan]
+    if: ${{ inputs.action == 'Deploy All (End-to-End)' || inputs.action == 'Infrastructure Only' }}
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Apply
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: "true"
+        run: |
+          chmod +x deployment/scripts/*.sh
+          ./deployment/scripts/deploy-infra.sh "${{ inputs.environment }}" "apply"
+
+  # ============================================================================
+  # JOB 4: AUTOMATED DATABASE MIGRATIONS (AZURE POSTGRESQL FLEXIBLE SERVER)
+  # ============================================================================
+  database-migrations:
+    name: "🗄️ [Database] Apply PostgreSQL Migrations (${{ inputs.environment }})"
+    needs: [setup-environment, infra-apply]
+    if: always() && (needs.setup-environment.result == 'success') && (inputs.action == 'Deploy All (End-to-End)' || inputs.action == 'Database Only') && (needs.infra-apply.result == 'success' || inputs.action == 'Database Only')
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install DB Migration Tools
+        run: pip install psycopg2-binary requests
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Execute Database Migrations
+        env:
+          RESOURCE_GROUP: ${{ needs.setup-environment.outputs.resource_group }}
+          POSTGRES_SERVER: ${{ needs.setup-environment.outputs.postgres_server }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'Admin@123!' }}
+          POSTGRES_USER: "adminuser"
+        run: |
+          chmod +x deployment/scripts/*.sh
+          ./deployment/scripts/deploy-database.sh "${{ inputs.environment }}"
+
+  # ============================================================================
+  # JOB 5: AUTOMATE BACKEND DEPLOYMENT (NEXTOPS INGESTION SERVICE ON VM)
+  # ============================================================================
+  backend-deployment:
+    name: "⚙️ [Backend] Deploy Ingestion Service (${{ inputs.environment }})"
+    needs: [setup-environment, database-migrations]
+    if: always() && (needs.setup-environment.result == 'success') && (inputs.action == 'Deploy All (End-to-End)' || inputs.action == 'Backend Only') && (needs.database-migrations.result == 'success' || inputs.action == 'Backend Only')
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Backend via Azure VM Run Command
+        env:
+          RESOURCE_GROUP: ${{ needs.setup-environment.outputs.resource_group }}
+          VM_NAME: ${{ needs.setup-environment.outputs.vm_name }}
+          POSTGRES_SERVER: ${{ needs.setup-environment.outputs.postgres_server }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'Admin@123!' }}
+          INGEST_API_KEY: ${{ secrets.INGEST_API_KEY || 'dev-key' }}
+        run: |
+          chmod +x deployment/scripts/*.sh
+          ./deployment/scripts/deploy-backend.sh "${{ inputs.environment }}"
+
+  # ============================================================================
+  # JOB 6: AUTOMATE FRONTEND DEPLOYMENT (NEXTOPS DASHBOARD ON VM / NGINX)
+  # ============================================================================
+  frontend-deployment:
+    name: "🌐 [Frontend] Deploy Dashboard (${{ inputs.environment }})"
+    needs: [setup-environment, backend-deployment]
+    if: always() && (needs.setup-environment.result == 'success') && (inputs.action == 'Deploy All (End-to-End)' || inputs.action == 'Frontend Only') && (needs.backend-deployment.result == 'success' || inputs.action == 'Frontend Only')
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Frontend via Azure VM Run Command
+        env:
+          RESOURCE_GROUP: ${{ needs.setup-environment.outputs.resource_group }}
+          VM_NAME: ${{ needs.setup-environment.outputs.vm_name }}
+        run: |
+          chmod +x deployment/scripts/*.sh
+          ./deployment/scripts/deploy-frontend.sh "${{ inputs.environment }}"
+
+  # ============================================================================
+  # JOB 7: DEPLOYMENT VALIDATION & END-TO-END HEALTH CHECKS
+  # ============================================================================
+  validation-and-health:
+    name: "🩺 [Validate] Full-Stack Health & Connectivity Check (${{ inputs.environment }})"
+    needs: [setup-environment, backend-deployment, frontend-deployment]
+    if: always() && (needs.setup-environment.result == 'success') && (inputs.action == 'Deploy All (End-to-End)' || inputs.action == 'Validate Only' || (inputs.action == 'Backend Only' && needs.backend-deployment.result == 'success') || (inputs.action == 'Frontend Only' && needs.frontend-deployment.result == 'success'))
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run Multi-Tier Validation Script
+        env:
+          RESOURCE_GROUP: ${{ needs.setup-environment.outputs.resource_group }}
+          VM_NAME: ${{ needs.setup-environment.outputs.vm_name }}
+          POSTGRES_SERVER: ${{ needs.setup-environment.outputs.postgres_server }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'Admin@123!' }}
+        run: |
+          chmod +x deployment/scripts/*.sh
+          ./deployment/scripts/validate-health.sh "${{ inputs.environment }}"
+
+  # ============================================================================
+  # JOB 8: AUTOMATED / MANUAL ROLLBACK
+  # Executes if validation fails (and auto_rollback=true) OR if action='Rollback'
+  # ============================================================================
+  rollback:
+    name: "⚠️ [Rollback] Revert Services & Infrastructure (${{ inputs.environment }})"
+    needs: [setup-environment, database-migrations, backend-deployment, frontend-deployment, validation-and-health]
+    if: always() && (
+      (inputs.auto_rollback == true && (needs.database-migrations.result == 'failure' || needs.backend-deployment.result == 'failure' || needs.frontend-deployment.result == 'failure' || needs.validation-and-health.result == 'failure')) ||
+      (inputs.action == 'Rollback')
+      )
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Execute Rollback Script
+        env:
+          RESOURCE_GROUP: ${{ needs.setup-environment.outputs.resource_group }}
+          VM_NAME: ${{ needs.setup-environment.outputs.vm_name }}
+          POSTGRES_SERVER: ${{ needs.setup-environment.outputs.postgres_server }}
+        run: |
+          chmod +x deployment/scripts/*.sh
+          ./deployment/scripts/rollback.sh "${{ inputs.environment }}" "${{ inputs.db_rollback_target }}"

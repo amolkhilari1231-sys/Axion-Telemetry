@@ -28,6 +28,6 @@
 #     name                 = "configuration"
 #     subnet_id            = data.azurerm_subnet.subnet[each.key].id
 #     public_ip_address_id = azurerm_public_ip.firewall_pip[each.key].id
-   
+
 #   }
 # }

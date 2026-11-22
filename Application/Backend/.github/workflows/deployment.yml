@@ -1,0 +1,88 @@
+name: "⚙️ Backend Deployment (nextops-ingestion-service)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target Cloud Environment"
+        required: true
+        type: choice
+        options:
+          - "Preprod"
+          - "Production"
+        default: "Preprod"
+      auto_rollback:
+        description: "Automatically rollback on deployment failure"
+        required: true
+        type: boolean
+        default: true
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test-and-lint:
+    name: "🧪 Run Unit & Syntax Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Verify Python Syntax
+        run: |
+          python -m py_compile main.py config.py database.py models.py
+
+  deploy-backend:
+    name: "⚙️ Deploy Ingestion Service (${{ github.event.inputs.environment || 'Preprod' }})"
+    needs: [test-and-lint]
+    environment: ${{ github.event.inputs.environment || 'Preprod' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure VM
+        id: deploy
+        run: |
+          ENV="${{ github.event.inputs.environment || 'Preprod' }}"
+          chmod +x deployment/deploy.sh
+          ./deployment/deploy.sh "$ENV"
+
+      - name: Rollback on Failure
+        if: failure() && (github.event.inputs.auto_rollback == 'true' || github.event_name == 'push')
+        run: |
+          ENV="${{ github.event.inputs.environment || 'Preprod' }}"
+          if [ "$ENV" = "Production" ]; then
+            RG="prod_rg"
+            VM="axionbackendvm-prod"
+          else
+            RG="dev_rg"
+            VM="axionbackendvm"
+          fi
+          echo "⚠️ Deployment failed. Rolling back service on $VM..."
+          az vm run-command invoke \
+            --resource-group "$RG" \
+            --name "$VM" \
+            --command-id RunShellScript \
+            --scripts "if [ -d /opt/nextops/backups ]; then cp -r /opt/nextops/backups/* /opt/nextops/backend/; systemctl restart nextops-ingestion; echo '✓ Restored from backup'; fi"

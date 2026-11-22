@@ -1,0 +1,77 @@
+name: "🗄️ NextOps Database - PostgreSQL Automated Migrations"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target Environment"
+        required: true
+        type: choice
+        options:
+          - "Preprod"
+          - "Production"
+        default: "Preprod"
+      action:
+        description: "Migration Action"
+        required: true
+        type: choice
+        options:
+          - "apply"
+          - "validate"
+          - "rollback"
+        default: "apply"
+      rollback_version:
+        description: "Target version to rollback (only required if action=rollback)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  migrate-database:
+    name: "🗄️ Database ${{ inputs.action }} (${{ inputs.environment }})"
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: pip install psycopg2-binary requests
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Execute Migration Action
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'Admin@123!' }}
+        run: |
+          ENV="${{ inputs.environment }}"
+          if [ "$ENV" = "Production" ]; then
+            export RESOURCE_GROUP="prod_rg"
+            export POSTGRES_SERVER="axionpostgresql-prod"
+          else
+            export RESOURCE_GROUP="dev_rg"
+            export POSTGRES_SERVER="axionpostgresql"
+          fi
+
+          chmod +x deployment/scripts/*.sh
+          if [ "${{ inputs.action }}" = "apply" ]; then
+            ./deployment/scripts/deploy-database.sh "$ENV"
+          elif [ "${{ inputs.action }}" = "rollback" ]; then
+            ./deployment/scripts/rollback.sh "$ENV" "${{ inputs.rollback_version }}"
+          else
+            python3 Application/Database/migrate.py --validate
+          fi

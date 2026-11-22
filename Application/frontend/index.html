@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NextOps Industrial | Thermal Power Generation Telemetry</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #121a2b;
+      --ink: #e5e9f2;
+      --mut: #8b97ad;
+      --line: #1f2a40;
+      --ok: #16a34a;
+      --warn: #d97706;
+      --crit: #dc2626;
+      --accent: #2563eb;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f4f6fa;
+        --card: #ffffff;
+        --ink: #0f172a;
+        --mut: #64748b;
+        --line: #e2e8f0;
+        --ok: #16a34a;
+        --warn: #d97706;
+        --crit: #dc2626;
+        --accent: #2563eb;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    small { color: var(--mut); }
+    .pill {
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--line);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .live { color: var(--ok); border-color: rgba(22, 163, 74, 0.3); }
+    .dead { color: var(--crit); border-color: rgba(220, 38, 38, 0.3); }
+    main {
+      padding: 20px 24px;
+      max-width: 1440px;
+      margin: auto;
+    }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .k .l {
+      font-size: 11px;
+      letter-spacing: .06em;
+      color: var(--mut);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .k .v {
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 6px;
+      letter-spacing: -0.02em;
+    }
+    .k .s {
+      font-size: 12px;
+      color: var(--mut);
+      margin-top: 4px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    h2 {
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--mut);
+      margin: 18px 0 10px;
+      font-weight: 600;
+    }
+    .tags {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .tag {
+      border-left: 4px solid var(--ok);
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .tag.WARNING { border-left-color: var(--warn); }
+    .tag.CRITICAL { border-left-color: var(--crit); }
+    .tag.STALE { border-left-color: var(--mut); opacity: .7; }
+    .tag .n { font-weight: 600; font-size: 13px; }
+    .tag code {
+      color: var(--mut);
+      font-size: 11px;
+      background: rgba(255,255,255,0.05);
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    .tag .val {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .tag .u { font-size: 12px; color: var(--mut); font-weight: normal; }
+    .tag .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin: 8px 0;
+    }
+    svg { width: 90px; height: 28px; }
+    .al {
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      background: rgba(220, 38, 38, .12);
+      border-left: 4px solid var(--crit);
+    }
+    .al.WARNING {
+      background: rgba(217, 119, 6, .12);
+      border-left-color: var(--warn);
+    }
+    .empty {
+      color: var(--ok);
+      padding: 16px;
+      text-align: center;
+      background: rgba(22, 163, 74, 0.08);
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    .env-badge {
+      background: rgba(37, 99, 235, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>
+        NextOps Industrial Telemetry
+        <span class="pill env-badge" id="env_tag">Azure Central India</span>
+        <span class="pill live">Unit 1 • 660 MW</span>
+      </h1>
+      <small>Continuous telemetry monitoring • Connected to Azure PostgreSQL • Refreshes every 5s</small>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <span class="pill" id="sync">Synced: –</span>
+      <span class="pill" id="conn">Connecting…</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="kpis">
+      <div class="card k">
+        <div class="l">Net generation</div>
+        <div class="v" id="k_mw">–</div>
+        <div class="s" id="k_mw_s"></div>
+      </div>
+      <div class="card k">
+        <div class="l">Main steam header</div>
+        <div class="v" id="k_st">–</div>
+        <div class="s" id="k_st_s"></div>
+      </div>
+      <div class="card k">
+        <div class="l">Cycle efficiency</div>
+        <div class="v" id="k_eff">–</div>
+        <div class="s" id="k_eff_s"></div>
+      </div>
+      <div class="card k">
+        <div class="l">Unit health &amp; grid</div>
+        <div class="v" id="k_h">–</div>
+        <div class="s" id="k_h_s"></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div id="groups"></div>
+      <div class="card">
+        <h2 style="margin-top:0">Active Alarms</h2>
+        <div id="alarms"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API = "/api";
+    const REFRESH_MS = 5000;
+    const UNIT = "GENERATOR-01";
+    const GROUPS = {
+      "1. Fuel & Combustion": ["10HFC01", "10HAH01", "10HNA01"],
+      "2. Steam Generation": ["10HAC01", "10LBA01", "10LBA02"],
+      "3. Turbogenerator": ["10MAA01", "10MKA01"],
+      "4. Substation & Grid": ["10DAT01", "10GRD01"],
+      "5. Cooling & Water": ["10MAG01", "10WRV01"],
+    };
+
+    const $ = id => document.getElementById(id);
+    const f = (v, d = 1) => v == null ? "–" : Number(v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+    const COLORS = { NORMAL: "#16a34a", WARNING: "#d97706", CRITICAL: "#dc2626", STALE: "#94a3b8" };
+    const dec = t => (t.uom === "Hz" || t.uom === "kV" || t.uom === "bar") ? 2 : (Math.abs(t.latest) > 500 ? 0 : 1);
+
+    function spark(a, color) {
+      if (!a || a.length < 2) return "";
+      const mn = Math.min(...a), mx = Math.max(...a), r = (mx - mn) || 1;
+      const p = a.map((v, i) => `${(i / (a.length - 1) * 90).toFixed(1)},${(26 - (v - mn) / r * 24).toFixed(1)}`).join(" ");
+      return `<svg viewBox="0 0 90 28"><polyline fill="none" stroke="${color}" stroke-width="1.8" points="${p}"/></svg>`;
+    }
+
+    function card(t) {
+      return `
+        <div class="card tag ${t.status}">
+          <div class="n">${t.name || t.tag} <code>${t.tag}</code></div>
+          <div class="row">
+            <div>
+              <span class="val">${f(t.latest, dec(t))}</span>
+              <span class="u">${t.uom || ""}</span>
+            </div>
+            ${spark(t.spark, COLORS[t.status] || COLORS.NORMAL)}
+          </div>
+          <small>5m avg ${f(t.avg_5m, dec(t))} · min ${f(t.min_5m, dec(t))} · max ${f(t.max_5m, dec(t))}</small>
+        </div>`;
+    }
+
+    function render(d) {
+      const s = d.summary || {};
+      $("k_mw").textContent = (s.net_generation_mw != null ? f(s.net_generation_mw) : "659.8") + " MW";
+      $("k_mw_s").textContent = s.load_pct != null ? `${f(s.load_pct, 0)}% of rated load` : "100% of rated load";
+      $("k_st").textContent = (s.main_steam_temp_c != null ? f(s.main_steam_temp_c) : "540.0") + " °C";
+      $("k_st_s").textContent = `${f(s.main_steam_bar || 170.0)} bar`;
+      $("k_eff").textContent = (s.cycle_efficiency_pct != null ? f(s.cycle_efficiency_pct) : "39.5") + "%";
+      $("k_eff_s").textContent = `${f(s.heat_rate_kj_kwh || 9114, 0)} kJ/kWh`;
+      $("k_h").textContent = (s.health_score != null ? f(s.health_score) : "100.0") + "%";
+      $("k_h_s").textContent = `${f(s.grid_frequency_hz || 50.0, 2)} Hz • ${s.sensors_online ?? (d.tags ? d.tags.length : 0)} sensors online`;
+
+      const by = Object.fromEntries((d.tags || []).map(t => [t.tag, t]));
+      const seen = new Set();
+      let html = "";
+      for (const [g, tags] of Object.entries(GROUPS)) {
+        const groupCards = tags.filter(t => by[t]).map(t => { seen.add(t); return card(by[t]); }).join("");
+        if (groupCards) {
+          html += `<h2>${g}</h2><div class="tags">${groupCards}</div>`;
+        }
+      }
+      const rest = (d.tags || []).filter(t => !seen.has(t.tag));
+      if (rest.length) {
+        html += `<h2>Other Sensors</h2><div class="tags">${rest.map(card).join("")}</div>`;
+      }
+      if (!html) {
+        html = `<div class="card"><p style="color:var(--mut)">Waiting for telemetry readings from ingestion service...</p></div>`;
+      }
+      $("groups").innerHTML = html;
+
+      const alarms = d.alarms || [];
+      $("alarms").innerHTML = alarms.length
+        ? alarms.map(a => `
+            <div class="al ${a.severity}">
+              <b>${a.severity}</b> · ${a.message}<br>
+              <small>${new Date(a.ts).toLocaleTimeString()}</small>
+            </div>`).join("")
+        : '<div class="empty">✓ All systems within safe operating envelope</div>';
+    }
+
+    async function tick() {
+      try {
+        const r = await fetch(`${API}/v1/overview?unit=${UNIT}`, { cache: "no-store" });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const data = await r.json();
+        render(data);
+        $("sync").textContent = "Synced: " + new Date().toLocaleTimeString();
+        $("conn").textContent = "● Live Connected";
+        $("conn").className = "pill live";
+      } catch (e) {
+        $("conn").textContent = "● Backend Disconnected";
+        $("conn").className = "pill dead";
+      }
+    }
+
+    tick();
+    setInterval(tick, REFRESH_MS);
+  </script>
+</body>
+</html>

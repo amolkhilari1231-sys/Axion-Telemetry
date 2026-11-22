@@ -1,16 +1,19 @@
 variable "vms" {}
+<<<<<<< HEAD
 variable "rgs" {}
 variable "location" {}
+=======
+>>>>>>> f0aee43 ( Update deployment code)
 
 data "azurerm_subnet" "subneet" {
-    for_each = var.vms
+  for_each             = var.vms
   name                 = each.value.subnet_name
   virtual_network_name = each.value.vnet_name
   resource_group_name  = var.rgs
 }
 
 resource "azurerm_network_interface" "nics" {
-    for_each = var.vms
+  for_each            = var.vms
   name                = each.value.nic_name
   location            = var.location
   resource_group_name = var.rgs
@@ -22,7 +25,15 @@ resource "azurerm_network_interface" "nics" {
   }
 }
 
+resource "random_password" "vm_password" {
+  for_each         = var.vms
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
 resource "azurerm_linux_virtual_machine" "VMS" {
+<<<<<<< HEAD
     depends_on = [ azurerm_network_interface.nics,]
     for_each = var.vms
   name                = each.value.vm_name
@@ -31,12 +42,21 @@ resource "azurerm_linux_virtual_machine" "VMS" {
   size                = each.value.size
   admin_username      = each.value.admin_username
   admin_password      = each.value.admin_password
+=======
+  depends_on                      = [azurerm_network_interface.nics]
+  for_each                        = var.vms
+  name                            = each.value.vm_name
+  resource_group_name             = each.value.rg_name
+  location                        = each.value.location
+  size                            = each.value.size
+  admin_username                  = each.value.admin_username
+  admin_password                  = each.value.admin_password
+>>>>>>> f0aee43 ( Update deployment code)
   disable_password_authentication = false
+
   network_interface_ids = [
     azurerm_network_interface.nics[each.key].id,
   ]
-
-
 
   os_disk {
     caching              = "ReadWrite"
@@ -51,9 +71,18 @@ resource "azurerm_linux_virtual_machine" "VMS" {
   }
 }
 
+output "vm_passwords" {
+  value     = { for k, v in var.vms : k => lookup(v, "admin_password", random_password.vm_password[k].result) }
+  sensitive = true
+}
+
+output "vm_usernames" {
+  value = { for k, v in var.vms : k => lookup(v, "admin_username", "adminuser") }
+}
+
 resource "azurerm_network_security_group" "nsg" {
-    depends_on = [ azurerm_linux_virtual_machine.VMS ]
-    for_each = var.vms
+  depends_on          = [azurerm_linux_virtual_machine.VMS]
+  for_each            = var.vms
   name                = each.value.nsg_name
   location            = var.location
   resource_group_name = var.rgs
@@ -69,6 +98,7 @@ resource "azurerm_network_security_group" "nsg" {
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
+
   dynamic "security_rule" {
     for_each = each.value.security_rule
     content {
@@ -84,8 +114,9 @@ resource "azurerm_network_security_group" "nsg" {
     }
   }
 }
+
 resource "azurerm_network_interface_security_group_association" "vm_nsg_association" {
-  for_each = var.vms
+  for_each   = var.vms
   depends_on = [azurerm_network_security_group.nsg, azurerm_network_interface.nics]
 
   network_interface_id      = azurerm_network_interface.nics[each.key].id
