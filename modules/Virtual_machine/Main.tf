@@ -1,9 +1,6 @@
 variable "vms" {}
-<<<<<<< HEAD
 variable "rgs" {}
 variable "location" {}
-=======
->>>>>>> f0aee43 ( Update deployment code)
 
 data "azurerm_subnet" "subneet" {
   for_each             = var.vms
@@ -33,25 +30,14 @@ resource "random_password" "vm_password" {
 }
 
 resource "azurerm_linux_virtual_machine" "VMS" {
-<<<<<<< HEAD
-    depends_on = [ azurerm_network_interface.nics,]
-    for_each = var.vms
-  name                = each.value.vm_name
-  resource_group_name = var.rgs
-  location            = var.location
-  size                = each.value.size
-  admin_username      = each.value.admin_username
-  admin_password      = each.value.admin_password
-=======
   depends_on                      = [azurerm_network_interface.nics]
   for_each                        = var.vms
   name                            = each.value.vm_name
-  resource_group_name             = each.value.rg_name
-  location                        = each.value.location
+  resource_group_name             = var.rgs
+  location                        = var.location
   size                            = each.value.size
   admin_username                  = each.value.admin_username
-  admin_password                  = each.value.admin_password
->>>>>>> f0aee43 ( Update deployment code)
+  admin_password                  = lookup(each.value, "admin_password", random_password.vm_password[each.key].result)
   disable_password_authentication = false
 
   network_interface_ids = [

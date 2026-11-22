@@ -4,14 +4,9 @@ data "azurerm_virtual_network" "vnet_id" {
     v.vnet_name => v
   }
   name                = each.value.vnet_name
-<<<<<<< HEAD
   resource_group_name = var.rgs
-  
-=======
-  resource_group_name = each.value.rg_name
-
->>>>>>> f0aee43 ( Update deployment code)
 }
+
 resource "azurerm_virtual_network_peering" "vnetpeering" {
   for_each = var.vnetpeering
 

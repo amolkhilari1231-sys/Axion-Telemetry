@@ -1,14 +1,7 @@
 module "resource_group" {
-<<<<<<< HEAD
   source   = "../../modules/Resource_Group"
   rgs      = var.rgs
   location = var.location
-
-
-=======
-  source = "../../modules/Resource_Group"
-  rgs    = var.rgs
->>>>>>> f0aee43 ( Update deployment code)
 }
 
 module "virtual_network" {
@@ -24,7 +17,6 @@ module "subnet" {
   source     = "../../modules/Subnets"
   subnets    = var.subnets
   rgs        = var.rgs
-
 }
 
 module "virtual_machine" {
@@ -73,9 +65,3 @@ module "Application_Gateway" {
   rgs                 = var.rgs
   location            = var.location
 }
-
-# module "Azure_firewall" {
-#   depends_on     = [module.subnet, module.nat_gateway]
-#   source         = "../../modules/Azure_firewall"
-#   azure_firewall = var.azure_firewall
-# }
