@@ -10,16 +10,15 @@ resource "azurerm_postgresql_flexible_server" "postgresql" {
   name                          = each.value.name
   resource_group_name           = var.rgs
   location                      = var.location
-  version                       = "12"
+  version                       = lookup(each.value, "version", "15")
   public_network_access_enabled = true
   administrator_login           = each.value.admin_username
-  administrator_password        = lookup(each.value, "admin_password", null) != null && lookup(each.value, "admin_password", "") != "" ? each.value.admin_password : random_password.postgres_password[each.key].result
-  zone                          = "1"
+  administrator_password        = lookup(each.value, "admin_password", random_password.postgres_password[each.key].result)
+  zone                          = lookup(each.value, "zone", null)
 
-  storage_mb   = 32768
-  storage_tier = "P4"
+  storage_mb = lookup(each.value, "storage_mb", 32768)
 
-  sku_name = "B_Standard_B1ms"
+  sku_name = lookup(each.value, "sku_name", "B_Standard_B2s")
 }
 
 output "postgresql_passwords" {
@@ -32,6 +31,6 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "postgresql_firewall
   for_each         = var.postgresql
   name             = "postgresql-firewall-rule"
   server_id        = azurerm_postgresql_flexible_server.postgresql[each.key].id
-  start_ip_address = "223.233.82.33"
-  end_ip_address   = "223.233.82.33"
+  start_ip_address = lookup(each.value, "firewall_start_ip", "0.0.0.0")
+  end_ip_address   = lookup(each.value, "firewall_end_ip", "255.255.255.255")
 }
